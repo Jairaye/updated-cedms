@@ -1,0 +1,15 @@
+# Bytecode & system files
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local data files
+*.csv
+*.xlsx
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# IDE configs
+.vscode/
+.env
