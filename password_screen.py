@@ -60,5 +60,6 @@ def render_password_screen():
         if password_input == correct_password:
             st.session_state.authenticated = True
             st.success("✅ Access granted. Redirecting...")
+            st.rerun()
         else:
             st.error("❌ Incorrect password. Please try again.")
