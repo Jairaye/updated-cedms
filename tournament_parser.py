@@ -1,3 +1,17 @@
+"""
+WSOP Tournament Schedule Parser
+
+Processes raw Excel sheets containing event schedules, cleans formatting artifacts,
+and produces enriched tournament entries with:
+
+- Valid dates from floating header rows
+- Standardized column names and missing value patches
+- Dealer forecast logic based on player projections and handedness
+- Restart flagging for multi-day events
+
+Designed for use in Streamlit dashboards and schedule visualizations.
+"""
+
 import pandas as pd
 import re
 
