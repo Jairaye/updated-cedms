@@ -28,10 +28,7 @@ def render_title_page():
     # 🏷️ Page Header
     st.markdown("<h2>Upload Tournament Excel File</h2>", unsafe_allow_html=True)
 
-    # 🔄 Restart Toggle
-    show_restarts = st.checkbox("Include Restart Rounds", value=False)
-
-    # 📁 File Upload
+        # 📁 File Upload
     uploaded_file = st.file_uploader("Choose tournament file (.xlsx)", type=["xlsx"])
 
     if uploaded_file:
@@ -55,11 +52,18 @@ def render_title_page():
             with st.expander("👀 First 10 Raw Rows"):
                 st.write(raw_df.head(10))
 
+                # 🧮 Final Preview Setup
+                preview_columns = [
+                "Date",
+                "Time",
+                "Event Number",
+                "Event Name",
+                "Player Projection",
+                "Dealer Forecast"
+]
+
             # 🧮 Final Preview
-            if show_restarts:
-                st.dataframe(parsed_df)
-            else:
-                st.dataframe(parsed_df[parsed_df["Restart_Flag"] == False])
+                st.dataframe(parsed_df[preview_columns])
 
         except Exception as e:
             st.error(f"❌ Error reading or parsing file: {str(e)}")
