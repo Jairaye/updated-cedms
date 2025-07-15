@@ -4,7 +4,7 @@ WSOP Tournament Schedule Parser
 Processes raw Excel sheets containing event schedules, cleans formatting artifacts,
 and produces enriched tournament entries with:
 
-- Valid dates from floating header rows
+- Valid dates from input rows
 - Standardized column names and missing value patches
 - Dealer forecast logic based on player projections and handedness
 - Restart flagging for multi-day events
@@ -46,47 +46,42 @@ def is_restart(row):
 
 def clean_raw_schedule(raw_df):
     df = raw_df.copy()
-    # Step 1: Fix header and dates
-    
 
-    # Step 2: Rename common aliases
+    # 🔄 Column Aliases
     column_aliases = {
         "Projection": "Player Projection",
         "Buy-in": "Buy-in Amount",
+        "Buy-In": "Buy-in Amount",
         "Event #": "Event Number"
     }
     df.rename(columns=column_aliases, inplace=True)
 
-    # Step 3: Patch missing columns
+    # 🔧 Ensure required columns
     required_cols = ["Date", "Time", "Event Number", "Event Name", "Buy-in Amount", "Player Projection"]
     for col in required_cols:
         if col not in df.columns:
             df[col] = None
 
-    # Step 3.5: Forward-fill valid Date rows BEFORE dropping headers
-    # Step 3.5: Rebuild the Date column from floating header rows
-    df["Raw_Date"] = df["Date"]  # for debug preview
-    df["Date"] = df["Date"].where(df["Event Number"].isnull())  # only keep section header dates
-    df["Date"] = df["Date"].fillna(method="ffill")
-   
-    # Step 4: NOW drop decorative header rows
-    df = df[df["Event Number"].notnull() & df["Event Name"].notnull()].copy()
+    # 🗓️ Parse dates directly
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce").apply(
+        lambda d: d.replace(year=2026).date() if pd.notnull(d) else None
+    )
 
-    # Format Date field
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df["Date"] = df["Date"].apply(lambda d: d.replace(year=2026).date() if pd.notnull(d) else None)
+    # 🕒 Parse start time with fallback
+    df["Raw_Time"] = df["Time"].astype(str)
+    df["StartHour"] = pd.to_datetime(df["Raw_Time"], format="%I:%M %p", errors="coerce").dt.hour
+    df["StartHour"] = df["StartHour"].fillna(9)
 
-    # Step 4: Drop invalid rows
-    # Step 4: Drop rows that were just floating section headers
-    df = df[df["Event Number"].notnull() & df["Event Name"].notnull()].copy()
+    # 🔢 Normalize projections
+    df["Player Projection"] = pd.to_numeric(df["Player Projection"], errors="coerce").fillna(0).astype(int)
 
-    
-
-    # Step 5: Apply parsing and forecasting
+    # 🔮 Enrich features
     df["Format"] = df["Event Name"].apply(parse_format)
     df["Handed"] = df.apply(lambda r: parse_handedness(r["Event Name"], r["Format"]), axis=1)
-    df["Player Projection"] = pd.to_numeric(df["Player Projection"], errors="coerce").fillna(0).astype(int)
     df["Dealer Forecast"] = df.apply(lambda r: forecast_dealers(r["Player Projection"], r["Handed"]), axis=1)
     df["Restart_Flag"] = df.apply(is_restart, axis=1)
+
+    # ✅ Filter complete tournament rows
+    df = df[df["Event Number"].notnull() & df["Event Name"].notnull()].copy()
 
     return df.reset_index(drop=True)
